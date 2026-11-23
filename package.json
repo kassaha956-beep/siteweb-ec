@@ -1,0 +1,14 @@
+{
+  "name": "siteweb-ec",
+  "version": "1.0.0",
+  "description": "Professional E-Commerce Website & Admin Dashboard",
+  "scripts": {
+    "db:start": "\"C:\\Program Files\\MySQL\\MySQL Server 9.6\\bin\\mysqld.exe\" --datadir=./database/data --port=3307 --console",
+    "db:init": "cd backend && node src/scripts/initDb.js",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev"
+  },
+  "keywords": ["ecommerce", "nextjs", "express", "mysql", "algeria"],
+  "author": "",
+  "license": "ISC"
+}
