@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ShoppingBag, ChevronRight, Star, Truck, ShieldCheck, RefreshCw, Heart, Plus, Minus, Check, ArrowLeft } from 'lucide-react';
-import ProductCard from '../../../components/ProductCard';
+import SuggestedProductsSection from '../../../components/SuggestedProductsSection';
 import { useCart } from '../../../context/CartContext';
 import { productService } from '../../../services/api';
 
@@ -338,18 +338,15 @@ export default function ProductDetailPage() {
           </div>
         </div>
 
-        {/* Related Products Section */}
+        {/* Related / Co-purchased Products Section */}
         {product.related_products && product.related_products.length > 0 && (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-serif font-bold text-[#54243F]">
-              Vous Aimerez Aussi
-            </h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {product.related_products.map((item) => (
-                <ProductCard key={item.id} product={item} />
-              ))}
-            </div>
-          </div>
+          <SuggestedProductsSection
+            productIds={[product.id]}
+            initialProducts={product.related_products}
+            title="Vous Aimerez Aussi"
+            subtitle="Suggestions intelligentes basées sur les achats associés et soins complémentaires."
+            limit={4}
+          />
         )}
       </div>
     </div>

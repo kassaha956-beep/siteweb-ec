@@ -1,20 +1,46 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight } from 'lucide-react';
+import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight, Sparkles } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { productService } from '../services/api';
 
 export default function CartDrawer() {
   const {
     isCartOpen,
     setIsCartOpen,
     cartItems,
+    addToCart,
     updateQuantity,
     removeFromCart,
     cartSubtotal,
     cartCount,
   } = useCart();
+
+  const [suggestions, setSuggestions] = useState([]);
+  const serializedIds = cartItems.map((i) => i.id).filter(Boolean).join(',');
+
+  useEffect(() => {
+    if (!isCartOpen || !serializedIds) {
+      if (!serializedIds) setSuggestions([]);
+      return;
+    }
+
+    let cancelled = false;
+    productService
+      .getSuggestions({ productIds: serializedIds, limit: 3 })
+      .then((res) => {
+        if (!cancelled && res.data && Array.isArray(res.data.data)) {
+          setSuggestions(res.data.data);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isCartOpen, serializedIds]);
 
   if (!isCartOpen) return null;
 
@@ -121,6 +147,63 @@ export default function CartDrawer() {
                   </div>
                 </div>
               ))
+            )}
+
+            {cartItems.length > 0 && suggestions.length > 0 && (
+              <div className="pt-4 mt-4 border-t border-[#F5DCE5] space-y-2.5">
+                <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[#54243F]">
+                  <Sparkles className="w-3.5 h-3.5 text-[#E9A5BE]" />
+                  <span>Souvent achetés ensemble</span>
+                </div>
+                <div className="space-y-2">
+                  {suggestions.map((item) => {
+                    const effectivePrice =
+                      item.discount_price && parseFloat(item.discount_price) > 0
+                        ? parseFloat(item.discount_price)
+                        : parseFloat(item.price);
+                    const imgSrc =
+                      item.primary_image ||
+                      'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=200&q=80';
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex items-center gap-3 p-2.5 bg-white rounded-xl border border-[#F5DCE5]"
+                      >
+                        <img
+                          src={imgSrc}
+                          alt={item.name}
+                          className="w-11 h-11 rounded-lg object-cover bg-[#FFF9F7]"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <Link
+                            href={`/product/${item.slug || item.id}`}
+                            onClick={() => setIsCartOpen(false)}
+                            className="font-serif text-xs font-bold text-[#54243F] hover:underline block truncate"
+                          >
+                            {item.name}
+                          </Link>
+                          <div className="flex items-center gap-2 text-[11px] text-[#6f6877]">
+                            <span className="font-semibold text-[#54243F]">
+                              {effectivePrice.toLocaleString()} DA
+                            </span>
+                            {item.suggestion_reason && (
+                              <span className="truncate text-[#E9A5BE] font-medium">
+                                • {item.suggestion_reason}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => addToCart(item, 1)}
+                          className="px-2.5 py-1.5 rounded-lg bg-[#F5DCE5] hover:bg-[#54243F] text-[#54243F] hover:text-white text-[11px] font-bold transition-colors shrink-0"
+                        >
+                          + Ajouter
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             )}
           </div>
 

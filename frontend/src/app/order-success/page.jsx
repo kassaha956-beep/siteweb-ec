@@ -1,14 +1,53 @@
 'use client';
 
-import React, { useState, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { CheckCircle2, Copy, Check, Package, PhoneCall, ArrowRight, Home } from 'lucide-react';
+import SuggestedProductsSection from '../../components/SuggestedProductsSection';
 
 function OrderSuccessContent() {
   const searchParams = useSearchParams();
   const orderRef = searchParams.get('ref') || 'BYD-2026-COMMANDE';
+  const itemsParam = searchParams.get('items') || '';
   const [copied, setCopied] = useState(false);
+  const [purchasedIds, setPurchasedIds] = useState([]);
+  const [initialSuggestions, setInitialSuggestions] = useState(null);
+
+  useEffect(() => {
+    let resolvedIds = itemsParam
+      .split(',')
+      .map((id) => parseInt(id.trim(), 10))
+      .filter((id) => Number.isInteger(id) && id > 0);
+
+    if (resolvedIds.length === 0) {
+      try {
+        const recentRaw = localStorage.getItem('biyodo_recent_purchases');
+        if (recentRaw) {
+          const parsedRecent = JSON.parse(recentRaw);
+          if (Array.isArray(parsedRecent)) {
+            resolvedIds = parsedRecent.filter((id) => Number.isInteger(id) && id > 0);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to read recent purchases', e);
+      }
+    }
+
+    setPurchasedIds(resolvedIds);
+
+    try {
+      const cached = sessionStorage.getItem('biyodo_last_order_suggestions');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setInitialSuggestions(parsed);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to read cached suggestions', e);
+    }
+  }, [itemsParam]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(orderRef);
@@ -103,6 +142,18 @@ function OrderSuccessContent() {
             <span>Retour à l'accueil</span>
           </Link>
         </div>
+      </div>
+
+      {/* Post-purchase product suggestions */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-16 pt-12 border-t border-[#F5DCE5]">
+        <SuggestedProductsSection
+          productIds={purchasedIds}
+          initialProducts={initialSuggestions}
+          allowEmptyAnchor={true}
+          title="Complétez votre rituel"
+          subtitle="Soins fréquemment achetés avec les produits de votre commande."
+          limit={4}
+        />
       </div>
     </div>
   );

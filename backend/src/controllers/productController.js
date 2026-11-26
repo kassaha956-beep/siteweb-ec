@@ -1,5 +1,6 @@
 const { pool, withTransaction } = require('../config/db');
 const { productSchema } = require('../validators');
+const { getSuggestedProducts, parsePositiveIntList } = require('../services/recommendationService');
 
 function slugify(text) {
   return text
@@ -204,30 +205,42 @@ async function getProduct(req, res, next) {
     );
     product.images = images;
 
-    // Fetch related products from same category
-    const [related] = await pool.query(
-      `
-      SELECT 
-        p.*,
-        c.name as category_name,
-        (
-          SELECT image_url 
-          FROM product_images 
-          WHERE product_id = p.id 
-          ORDER BY is_primary DESC, display_order ASC, id ASC 
-          LIMIT 1
-        ) as primary_image
-      FROM products p
-      LEFT JOIN categories c ON p.category_id = c.id
-      WHERE p.category_id = ? AND p.id != ? AND p.is_active = 1
-      ORDER BY p.is_featured DESC, p.views_count DESC
-      LIMIT 4
-    `,
-      [product.category_id, product.id]
-    );
-    product.related_products = related;
+    // Fetch intelligent purchase-based & similarity suggestions
+    product.related_products = await getSuggestedProducts({
+      productIds: [product.id],
+      limit: 4,
+    });
 
     return res.json({ success: true, data: product });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// Public: Get product suggestions based on co-purchased & related products
+async function getProductSuggestions(req, res, next) {
+  try {
+    const { productId, productIds, excludeIds, limit = 4 } = req.query;
+    const anchorIds = parsePositiveIntList([
+      ...parsePositiveIntList(productId),
+      ...parsePositiveIntList(productIds),
+    ]);
+    const excluded = parsePositiveIntList(excludeIds);
+
+    const suggestions = await getSuggestedProducts({
+      productIds: anchorIds,
+      excludeIds: excluded,
+      limit: parseInt(limit, 10) || 4,
+    });
+
+    return res.json({
+      success: true,
+      data: suggestions,
+      meta: {
+        anchor_product_ids: anchorIds,
+        count: suggestions.length,
+      },
+    });
   } catch (err) {
     next(err);
   }
@@ -456,6 +469,7 @@ module.exports = {
   getProducts,
   getFeaturedProducts,
   getProduct,
+  getProductSuggestions,
   createProduct,
   updateProduct,
   deleteProduct,

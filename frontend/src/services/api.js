@@ -13,6 +13,7 @@ const api = axios.create({
 export const productService = {
   getProducts: (params) => api.get('/products', { params }),
   getFeatured: (limit = 8) => api.get('/products/featured', { params: { limit } }),
+  getSuggestions: (params) => api.get('/products/suggestions', { params }),
   getProduct: (idOrSlug) => api.get(`/products/${idOrSlug}`),
 };
 

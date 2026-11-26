@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ShieldCheck, Truck, ArrowLeft, CheckCircle2, AlertCircle, ShoppingBag, Lock } from 'lucide-react';
@@ -9,7 +9,8 @@ import { wilayaService, orderService } from '../../services/api';
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { cartItems, cartSubtotal, appliedCoupon, couponDiscount, clearCart } = useCart();
+  const { cartItems, isLoaded, cartSubtotal, appliedCoupon, couponDiscount, clearCart } = useCart();
+  const orderCompletedRef = useRef(false);
 
   const [wilayas, setWilayas] = useState([]);
   const [loadingWilayas, setLoadingWilayas] = useState(true);
@@ -46,12 +47,12 @@ export default function CheckoutPage() {
       .finally(() => setLoadingWilayas(false));
   }, []);
 
-  // Redirect if cart is empty
+  // Redirect if cart is empty (only after cart loads and not after completing an order)
   useEffect(() => {
-    if (cartItems.length === 0) {
+    if (isLoaded && cartItems.length === 0 && !orderCompletedRef.current) {
       router.push('/cart');
     }
-  }, [cartItems, router]);
+  }, [isLoaded, cartItems, router]);
 
   const handleWilayaChange = (e) => {
     const wId = parseInt(e.target.value, 10);
@@ -109,9 +110,23 @@ export default function CheckoutPage() {
       const res = await orderService.createOrder(payload);
 
       if (res.data && res.data.success) {
+        orderCompletedRef.current = true;
         const orderRef = res.data.order.order_reference;
+        const purchasedIds = cartItems.map((item) => item.id);
+        try {
+          const existingRaw = localStorage.getItem('biyodo_recent_purchases');
+          const existingIds = existingRaw ? JSON.parse(existingRaw) : [];
+          const merged = Array.from(new Set([...purchasedIds, ...(Array.isArray(existingIds) ? existingIds : [])])).slice(0, 10);
+          localStorage.setItem('biyodo_recent_purchases', JSON.stringify(merged));
+          sessionStorage.setItem(
+            'biyodo_last_order_suggestions',
+            JSON.stringify(res.data.suggestions || [])
+          );
+        } catch (storageErr) {
+          console.error('Could not persist purchase suggestion state:', storageErr);
+        }
         clearCart();
-        router.push(`/order-success?ref=${orderRef}`);
+        router.push(`/order-success?ref=${encodeURIComponent(orderRef)}&items=${purchasedIds.join(',')}`);
       }
     } catch (err) {
       console.error('Order creation failed:', err);

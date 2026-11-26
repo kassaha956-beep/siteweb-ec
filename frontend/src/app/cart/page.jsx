@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, ShieldCheck, Tag, ArrowLeft, Truck, AlertCircle } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { wilayaService, couponService } from '../../services/api';
+import SuggestedProductsSection from '../../components/SuggestedProductsSection';
 
 export default function CartPage() {
   const router = useRouter();
@@ -28,6 +29,21 @@ export default function CartPage() {
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState('');
   const [couponSuccess, setCouponSuccess] = useState('');
+  const [recentPurchasedIds, setRecentPurchasedIds] = useState([]);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('biyodo_recent_purchases');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setRecentPurchasedIds(parsed);
+        }
+      }
+    } catch (e) {
+      console.error('Error reading recent purchases', e);
+    }
+  }, []);
 
   // Load wilayas for shipping estimate
   useEffect(() => {
@@ -106,6 +122,17 @@ export default function CartPage() {
             </Link>
           </div>
         </div>
+
+        {recentPurchasedIds.length > 0 && (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-16 pt-12 border-t border-[#F5DCE5]">
+            <SuggestedProductsSection
+              productIds={recentPurchasedIds}
+              title="Recommandé suite à vos achats"
+              subtitle="Des soins sélectionnés pour compléter vos dernières commandes."
+              limit={4}
+            />
+          </div>
+        )}
       </div>
     );
   }
@@ -342,6 +369,15 @@ export default function CartPage() {
             </div>
           </div>
         </div>
+
+        {/* Cart-based suggestions */}
+        <SuggestedProductsSection
+          productIds={cartItems.map((item) => item.id)}
+          title="Souvent achetés avec votre panier"
+          subtitle="Des soins complémentaires recommandés selon les achats associés à votre sélection."
+          limit={4}
+          className="mt-16 pt-12 border-t border-[#F5DCE5]"
+        />
       </div>
     </div>
   );

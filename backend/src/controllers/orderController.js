@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const { pool, withTransaction } = require('../config/db');
 const { orderCreateSchema } = require('../validators');
+const { getSuggestedProducts } = require('../services/recommendationService');
 
 function generateOrderReference() {
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -195,6 +196,16 @@ async function createOrder(req, res, next) {
       return newOrderId;
     });
 
+    let suggestions = [];
+    try {
+      suggestions = await getSuggestedProducts({
+        productIds,
+        limit: 4,
+      });
+    } catch (suggErr) {
+      console.error('Failed to compute post-order suggestions:', suggErr.message);
+    }
+
     return res.status(201).json({
       success: true,
       message: 'Votre commande a été enregistrée avec succès.',
@@ -213,6 +224,7 @@ async function createOrder(req, res, next) {
         items: validatedItems,
         status: 'pending',
       },
+      suggestions,
     });
   } catch (err) {
     next(err);

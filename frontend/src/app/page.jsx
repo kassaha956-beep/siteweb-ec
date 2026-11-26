@@ -6,14 +6,28 @@ import { ArrowRight, Sparkles, ShieldCheck, Heart, Award, CheckCircle2 } from 'l
 import HeroBanner from '../components/HeroBanner';
 import CategoryList from '../components/CategoryList';
 import ProductCard from '../components/ProductCard';
+import SuggestedProductsSection from '../components/SuggestedProductsSection';
 import { productService, categoryService } from '../services/api';
 
 export default function HomePage() {
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [recentPurchasedIds, setRecentPurchasedIds] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    try {
+      const stored = localStorage.getItem('biyodo_recent_purchases');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setRecentPurchasedIds(parsed);
+        }
+      }
+    } catch (e) {
+      console.error('Error reading recent purchases', e);
+    }
+
     Promise.all([
       productService.getFeatured(8),
       categoryService.getCategories(),
@@ -37,6 +51,20 @@ export default function HomePage() {
 
       {/* 2. Shop by Category */}
       <CategoryList categories={categories} />
+
+      {/* Personalized suggestions after previous purchases */}
+      {recentPurchasedIds.length > 0 && (
+        <section className="py-14 bg-[#FFF9F7] border-t border-[#F5DCE5]">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <SuggestedProductsSection
+              productIds={recentPurchasedIds}
+              title="Recommandé suite à vos achats"
+              subtitle="Des soins sélectionnés pour compléter les produits que vous avez récemment commandés."
+              limit={4}
+            />
+          </div>
+        </section>
+      )}
 
       {/* 3. Popular / Featured Products Section */}
       <section className="py-14 bg-white border-y border-[#F5DCE5]">

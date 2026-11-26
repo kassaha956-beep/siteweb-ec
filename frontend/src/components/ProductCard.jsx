@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ShoppingBag, Eye, Star } from 'lucide-react';
+import { ShoppingBag, Eye, Star, Sparkles } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 
 export default function ProductCard({ product }) {
@@ -41,6 +41,12 @@ export default function ProductCard({ product }) {
           {product.is_featured === 1 && (
             <span className="bg-[#54243F] text-[#FFF9F7] font-semibold text-[10px] px-2.5 py-0.5 rounded-full shadow-sm">
               Coup de Cœur
+            </span>
+          )}
+          {product.suggestion_reason && (
+            <span className="bg-white/95 backdrop-blur-sm text-[#54243F] border border-[#E9A5BE] font-semibold text-[10px] px-2.5 py-0.5 rounded-full shadow-sm inline-flex items-center gap-1">
+              <Sparkles className="w-2.5 h-2.5 text-[#E9A5BE]" />
+              {product.suggestion_reason}
             </span>
           )}
         </div>
